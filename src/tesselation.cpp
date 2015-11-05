@@ -79,7 +79,7 @@ void smooth_normals(Mesh* mesh) {
         S = mesh->pos[quad.z]-mesh->pos[quad.w];
         normal1 = normalize(cross(U, V));
         normal2 = normalize(cross(T, S));
-        normal = (normal1+normal2)/length(normal1+normal2);
+        normal = normalize((normal1+normal2)/2);
         
         // accumulate face normal to the vertex normals of each face index
         normals[quad.x] += normal;
@@ -114,14 +114,40 @@ void subdivide_catmullclark(Mesh* subdiv) {
     // YOUR CODE GOES HERE ---------------------
     // skip is needed
     // allocate a working Mesh copied from the subdiv
+    Mesh* copy = new Mesh();
     // foreach level
+    for(int i = 0; i< subdiv->subdivision_catmullclark_level; i++){
         // make empty pos and quad arrays
+        auto pos = vector<vec3f>(subdiv->pos.size(), zero3f);
+        auto quad = vector<vec4i>(subdiv->quad.size(), zero4i);
         // create edge_map from current mesh
+        auto edge_map = EdgeMap(copy->triangle, copy->quad);
         // linear subdivision - create vertices
         // copy all vertices from the current mesh
+        copy->pos = subdiv->pos;
         // add vertices in the middle of each edge (use EdgeMap)
+        auto edge_list = edge_map.edges();
+        auto mid_points = vector<vec3f>(edge_list.size(),zero3f);
+        
+        for (auto edge: edge_list){
+            int p1 = edge.x;
+            int p2 = edge.y;
+            mid_points[edge_map.edge_index(edge)] = (subdiv->pos[p1] + subdiv->pos[p2])/2;
+        }
         // add vertices in the middle of each triangle
+        auto triangle_centroid = vector<vec3f>(subdiv->triangle.size(),zero3f);
+        i = 0;
+        for (auto triangle: subdiv->triangle){
+            triangle_centroid[i] = (subdiv->pos[triangle.x]+subdiv->pos[triangle.y]+subdiv->pos[triangle.z])/3;
+            i++;
+        }
         // add vertices in the middle of each quad
+        auto quad_centroid = vector<vec3f>(subdiv->quad.size(),zero3f);
+        i = 0;
+        for (auto quad: subdiv->quad){
+            quad_centroid[i] = (subdiv->pos[quad.x]+subdiv->pos[quad.y]+subdiv->pos[quad.z]+subdiv->pos[quad.w])/4;
+            i++;
+        }
         // subdivision pass --------------------------------
         // compute an offset for the edge vertices
         // compute an offset for the triangle vertices
@@ -140,6 +166,7 @@ void subdivide_catmullclark(Mesh* subdiv) {
         // correction pass ----------------------------------
         // foreach pos, compute correction p = p + (avg_p - p) * (4/avg_count)
         // set new arrays pos, quad back into the working mesh; clear triangle array
+    }
     // clear subdivision
     // according to smooth, either smooth_normals or facet_normals
     // copy back
