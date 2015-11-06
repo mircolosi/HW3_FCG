@@ -113,8 +113,11 @@ void smooth_tangents(Mesh* polyline) {
 void subdivide_catmullclark(Mesh* subdiv) {
     // YOUR CODE GOES HERE ---------------------
     // skip is needed
+    if (subdiv->subdivision_catmullclark_level == 0) {
+        return;
+    }
     // allocate a working Mesh copied from the subdiv
-    Mesh* copy = subdiv;
+    Mesh* copy = new Mesh(*subdiv);
     // foreach level
     for(int i = 0; i< copy->subdivision_catmullclark_level; i++){
         // make empty pos and quad arrays
@@ -165,27 +168,39 @@ void subdivide_catmullclark(Mesh* subdiv) {
         i = 0;
         for(auto triangle : copy->triangle){
             // add three quads to the new quad array
-            new_quad[i] = vec4i(i, mid_points_offset+i, triangle_offset+i, mid_points_offset+(i+1));
-            new_quad[i+1] = vec4i(i+1, mid_points_offset+(i+2), triangle_offset+i, mid_points_offset+i);
-            new_quad[i+2] = vec4i(i+2, mid_points_offset+(i+1), triangle_offset+i, mid_points_offset+(i+2));
+            int mid_point1, mid_point2, mid_point3;
+            
+            mid_point1 = edge_map.edge_index(vec2i(i, i+1));
+            mid_point2 = edge_map.edge_index(vec2i(i, i+2));
+            mid_point3 = edge_map.edge_index(vec2i(i+1, i+2));
+            
+            new_quad[i] = vec4i(i, mid_points_offset+mid_point1, triangle_offset+i, mid_points_offset+mid_point2);
+            new_quad[i+1] = vec4i(i+1, mid_points_offset+mid_point3, triangle_offset+i, mid_points_offset+mid_point1);
+            new_quad[i+2] = vec4i(i+2, mid_points_offset+mid_point2, triangle_offset+i, mid_points_offset+mid_point3);
             
             i += 3;
         }
         // foreach quad
         
         for (auto quad: copy->quad){
+            int mid_point1, mid_point2, mid_point3, mid_point4;
+            
+            mid_point1 = edge_map.edge_index(vec2i(i, i+1));
+            mid_point2 = edge_map.edge_index(vec2i(i+1, i+2));
+            mid_point3 = edge_map.edge_index(vec2i(i+2, i+3));
+            mid_point4 = edge_map.edge_index(vec2i(i+3, i));
             // add four quads to the new quad array
-            new_quad[i] = vec4i(i, mid_points_offset+i, quad_offset+i, mid_points_offset+(i+3));
-            new_quad[i+1] = vec4i(i+1, mid_points_offset+(i+1), quad_offset+i, mid_points_offset+i);
-            new_quad[i+2] = vec4i(i+2, mid_points_offset+(i+2), quad_offset+i, mid_points_offset+(i+1));
-            new_quad[i+3] = vec4i(i+3, mid_points_offset+(i+3), quad_offset+i, mid_points_offset+(i+2));
+            new_quad[i] = vec4i(i, mid_points_offset+mid_point1, quad_offset+i, mid_points_offset+mid_point4);
+            new_quad[i+1] = vec4i(i+1, mid_points_offset+mid_point2, quad_offset+i, mid_points_offset+mid_point1);
+            new_quad[i+2] = vec4i(i+2, mid_points_offset+mid_point3, quad_offset+i, mid_points_offset+mid_point2);
+            new_quad[i+3] = vec4i(i+3, mid_points_offset+mid_point4, quad_offset+i, mid_points_offset+mid_point3);
             i += 4;
         }
         // averaging pass ----------------------------------
         // create arrays to compute pos averages (avg_pos, avg_count)
         // arrays have the same length as the new pos array, and are init to zero
         auto avg_pos = vector<vec3f> (new_pos.size(), zero3f);
-        auto avg_count = vector<int> (copy->pos.size(), 0);
+        auto avg_count = vector<unsigned int> (new_pos.size(), 0);
         // for each new quad
         for(auto quad: new_quad){
             // compute quad center using the new pos array
@@ -194,7 +209,7 @@ void subdivide_catmullclark(Mesh* subdiv) {
             for (int i = 0; i < 4; i++) {
                 int v_index = quad[i];
                 avg_pos[v_index] += c;
-                avg_count[v_index]++ ;
+                avg_count[v_index] += 1 ;
             }
         }
         
@@ -204,18 +219,31 @@ void subdivide_catmullclark(Mesh* subdiv) {
         
         // correction pass ----------------------------------
         // foreach pos, compute correction p = p + (avg_p - p) * (4/avg_count)
-        for (int v_index = 0; avg_pos.size(); i++)
+        for (int v_index = 0; v_index < avg_pos.size(); v_index++)
             new_pos[v_index] += (avg_pos[v_index] - new_pos[v_index] * 4 / avg_count[v_index]);
             
         // set new arrays pos, quad back into the working mesh; clear triangle array
+        copy->pos.clear();
+//        copy->pos.insert(copy->pos.end(), new_pos.begin(),new_pos.end());
+        copy->pos = vector<vec3f>(new_pos.size(), zero3f);
         copy->pos = new_pos;
+        
+        copy->quad.clear();
+        copy->quad = vector<vec4i>(new_quad.size(), zero4i);
         copy->quad = new_quad;
         copy->triangle.clear();
     }
     // clear subdivision
+    subdiv->pos.clear();
+    subdiv->quad.clear();
+    subdiv->triangle.clear();
     // according to smooth, either smooth_normals or facet_normals
+    facet_normals(copy);
     // copy back
+    subdiv = copy;
     // clear
+    delete [] &copy;
+    
 }
 
 // subdivide bezier spline into line segments (assume bezier has only bezier segments and no lines)
