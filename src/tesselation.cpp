@@ -170,9 +170,9 @@ void subdivide_catmullclark(Mesh* subdiv) {
             // add three quads to the new quad array
             int mid_point1, mid_point2, mid_point3;
             
-            mid_point1 = edge_map.edge_index(vec2i(i, i+1));
-            mid_point2 = edge_map.edge_index(vec2i(i, i+2));
-            mid_point3 = edge_map.edge_index(vec2i(i+1, i+2));
+            mid_point1 = edge_map.edge_index(vec2i(triangle.x, triangle.y));
+            mid_point2 = edge_map.edge_index(vec2i(triangle.x, triangle.z));
+            mid_point3 = edge_map.edge_index(vec2i(triangle.y, triangle.z));
             
             new_quad[i] = vec4i(i, mid_points_offset+mid_point1, triangle_offset+i, mid_points_offset+mid_point2);
             new_quad[i+1] = vec4i(i+1, mid_points_offset+mid_point3, triangle_offset+i, mid_points_offset+mid_point1);
@@ -185,10 +185,10 @@ void subdivide_catmullclark(Mesh* subdiv) {
         for (auto quad: copy->quad){
             int mid_point1, mid_point2, mid_point3, mid_point4;
             
-            mid_point1 = edge_map.edge_index(vec2i(i, i+1));
-            mid_point2 = edge_map.edge_index(vec2i(i+1, i+2));
-            mid_point3 = edge_map.edge_index(vec2i(i+2, i+3));
-            mid_point4 = edge_map.edge_index(vec2i(i+3, i));
+            mid_point1 = edge_map.edge_index(vec2i(quad.x, quad.y));
+            mid_point2 = edge_map.edge_index(vec2i(quad.y, quad.z));
+            mid_point3 = edge_map.edge_index(vec2i(quad.z, quad.w));
+            mid_point4 = edge_map.edge_index(vec2i(quad.w, quad.x));
             // add four quads to the new quad array
             new_quad[i] = vec4i(i, mid_points_offset+mid_point1, quad_offset+i, mid_points_offset+mid_point4);
             new_quad[i+1] = vec4i(i+1, mid_points_offset+mid_point2, quad_offset+i, mid_points_offset+mid_point1);
