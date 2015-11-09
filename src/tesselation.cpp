@@ -119,7 +119,7 @@ void subdivide_catmullclark(Mesh* subdiv) {
     // allocate a working Mesh copied from the subdiv
     Mesh* copy = new Mesh(*subdiv);
     // foreach level
-    for(int i = 0; i< copy->subdivision_catmullclark_level; i++){
+    for(int j = 0; j< copy->subdivision_catmullclark_level; j++){
         // make empty pos and quad arrays
         auto new_pos = vector<vec3f>();
         auto new_quad = vector<vec4i>(copy->triangle.size()*3+copy->quad.size()*4, zero4i);
@@ -140,7 +140,7 @@ void subdivide_catmullclark(Mesh* subdiv) {
         }
         // add vertices in the middle of each triangle
         auto triangle_centroid = vector<vec3f>(copy->triangle.size(),zero3f);
-        i = 0;
+        int i = 0;
         for (auto triangle: copy->triangle){
             triangle_centroid[i] = (copy->pos[triangle.x]+copy->pos[triangle.y]+copy->pos[triangle.z])/3;
             i++;
@@ -165,20 +165,25 @@ void subdivide_catmullclark(Mesh* subdiv) {
         // compute an offset for the quad vertices
         int quad_offset = triangle_offset + triangle_centroid.size();
         // foreach triangle
+        vec4i new_quad1,new_quad2,new_quad3, new_quad4;
         i = 0;
         for(auto triangle : copy->triangle){
             // add three quads to the new quad array
             int mid_point1, mid_point2, mid_point3;
             
             mid_point1 = edge_map.edge_index(vec2i(triangle.x, triangle.y));
-            mid_point2 = edge_map.edge_index(vec2i(triangle.x, triangle.z));
+            mid_point2 = edge_map.edge_index(vec2i(triangle.z, triangle.x));
             mid_point3 = edge_map.edge_index(vec2i(triangle.y, triangle.z));
             
-            new_quad[i] = vec4i(i, mid_points_offset+mid_point1, triangle_offset+i, mid_points_offset+mid_point2);
-            new_quad[i+1] = vec4i(i+1, mid_points_offset+mid_point3, triangle_offset+i, mid_points_offset+mid_point1);
-            new_quad[i+2] = vec4i(i+2, mid_points_offset+mid_point2, triangle_offset+i, mid_points_offset+mid_point3);
+            new_quad1 = vec4i(triangle.x, mid_points_offset+mid_point1, triangle_offset+i, mid_points_offset+mid_point2);
+            new_quad2 = vec4i(triangle.y, mid_points_offset+mid_point3, triangle_offset+i, mid_points_offset+mid_point1);
+            new_quad3 = vec4i(triangle.z, mid_points_offset+mid_point2, triangle_offset+i, mid_points_offset+mid_point3);
             
-            i += 3;
+            new_quad.push_back(new_quad1);
+            new_quad.push_back(new_quad2);
+            new_quad.push_back(new_quad3);
+            
+            i++;
         }
         // foreach quad
         
@@ -190,11 +195,17 @@ void subdivide_catmullclark(Mesh* subdiv) {
             mid_point3 = edge_map.edge_index(vec2i(quad.z, quad.w));
             mid_point4 = edge_map.edge_index(vec2i(quad.w, quad.x));
             // add four quads to the new quad array
-            new_quad[i] = vec4i(i, mid_points_offset+mid_point1, quad_offset+i, mid_points_offset+mid_point4);
-            new_quad[i+1] = vec4i(i+1, mid_points_offset+mid_point2, quad_offset+i, mid_points_offset+mid_point1);
-            new_quad[i+2] = vec4i(i+2, mid_points_offset+mid_point3, quad_offset+i, mid_points_offset+mid_point2);
-            new_quad[i+3] = vec4i(i+3, mid_points_offset+mid_point4, quad_offset+i, mid_points_offset+mid_point3);
-            i += 4;
+            new_quad1 = vec4i(quad.x, mid_points_offset+mid_point1, quad_offset+i, mid_points_offset+mid_point4);
+            new_quad2 = vec4i(quad.y, mid_points_offset+mid_point2, quad_offset+i, mid_points_offset+mid_point1);
+            new_quad3 = vec4i(quad.z, mid_points_offset+mid_point3, quad_offset+i, mid_points_offset+mid_point2);
+            new_quad4 = vec4i(quad.w, mid_points_offset+mid_point4, quad_offset+i, mid_points_offset+mid_point3);
+            
+            new_quad.push_back(new_quad1);
+            new_quad.push_back(new_quad2);
+            new_quad.push_back(new_quad3);
+            new_quad.push_back(new_quad4);
+            
+            i++;
         }
         // averaging pass ----------------------------------
         // create arrays to compute pos averages (avg_pos, avg_count)
@@ -238,11 +249,14 @@ void subdivide_catmullclark(Mesh* subdiv) {
     subdiv->quad.clear();
     subdiv->triangle.clear();
     // according to smooth, either smooth_normals or facet_normals
-    facet_normals(copy);
+    if (subdiv->subdivision_catmullclark_smooth)
+        smooth_normals(copy);
+    else
+        facet_normals(copy);
     // copy back
     subdiv = copy;
     // clear
-    delete [] &copy;
+    delete copy;
     
 }
 
@@ -250,28 +264,94 @@ void subdivide_catmullclark(Mesh* subdiv) {
 void subdivide_bezier(Mesh* bezier) {
     // YOUR CODE GOES HERE ---------------------
     // skip is needed
+    if (bezier->subdivision_bezier_level == 0)
+        return;
     // allocate a working polyline from bezier
-    Mesh* polyline = bezier;
+    Mesh* polyline = new Mesh(*bezier);
     // foreach level
     for (int i = 0; i < bezier->subdivision_bezier_level; i++){
         // make new arrays of positions and bezier segments
-        auto pos = vector<vec3f>();
-        auto segments = vector<int>();
+        auto new_pos = vector<vec3f>(polyline->pos);
+        auto new_segments = vector<vec4i>();
         // copy all the vertices into the new array (this waste space but it is easier for now)
+        vec3f q0, q1, q2, r0, r1, s, p0, p1, p2, p3;
+        vec4i segment1, segment2;
+        
         // foreach bezier segment
+        for (auto segment: polyline->spline) {
             // apply subdivision algorithm
+            p0 = new_pos[segment.x];
+            p1 = new_pos[segment.y];
+            p2 = new_pos[segment.z];
+            p3 = new_pos[segment.w];
+            
+            q0 = (p0+p1)/2.0;
+            q1 = (p1+p2)/2.0;
+            q2 = (p2+p3)/2.0;
+            
+            r0 = (q0+q1)/2.0;
+            r1 = (q1+q2)/2.0;
+            
+            s = (r0+r1)/2.0;
+            
             // prepare indices for two new segments
+            segment1.x = segment.x;
+            segment2.w = segment.w;
+            
             // add mid point
+            new_pos.push_back(s);
+            segment1.w = new_pos.size()-1;
+            segment2.x = new_pos.size()-1;
+            
             // add points for first segment and fix segment indices
+            new_pos.push_back(q0);
+            segment1.y = new_pos.size()-1;
+            new_pos.push_back(r0);
+            segment1.z = new_pos.size()-1;
+            
             // add points for second segment and fix segment indices
+            new_pos.push_back(r1);
+            segment2.y = new_pos.size()-1;
+            new_pos.push_back(q2);
+            segment2.z = new_pos.size()-1;
             // add indices for both segments into new segments array
+            
+            new_segments.push_back(segment1);
+            new_segments.push_back(segment2);
+        }
         // set new arrays pos, segments into the working lineset
+        polyline->pos.clear();
+        polyline->pos = new_pos;
+        polyline->spline.clear();
+        polyline->spline = new_segments;
+        
     }
     // copy bezier segments into line segments
+    polyline->line.clear();
+    vec2i l0, l1, l2;
+    for (auto line: polyline->spline){
+        l0 = vec2i(line.x, line.y);
+        l1 = vec2i(line.y, line.z);
+        l2 = vec2i(line.z, line.w);
+        
+        polyline->line.push_back(l0);
+        polyline->line.push_back(l1);
+        polyline->line.push_back(l2);
+    }
     // clear bezier array from lines
+    bezier->pos.clear();
+    bezier->spline.clear();
+    bezier->line.clear();
     // run smoothing to get proper tangents
+    smooth_tangents(polyline);
+    
     // copy back
+    bezier->pos = polyline->pos;
+    bezier->spline = polyline->spline;
+    bezier->line = polyline->line;
+    
     // clear
+    delete polyline;
 }
 
 Mesh* make_surface_mesh(frame3f frame, float radius, bool isquad, Material* mat, float offset) {
