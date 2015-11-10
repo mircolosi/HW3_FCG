@@ -36,7 +36,6 @@ OpenGL/GLSL is a large API for programming interactive graphics applications. It
 We strongly suggest that you follow the tutorial given in the lecture notes rather than attempting to learn all the API. You are not to learn all of it, in fact you should learn the smallest amount possible. The idea is to give you a gentle introduction to OpenGL and make you understand the interplay between CPU/C++ and GPU/GLSL. For OpenGL/GLSL documentation search the web, especially at www.khronos.org/.
 Hints
 We suggest to implement the renderer following the steps presented above. To debug subdivision code, you can use the wireframe mode.
-Submission
-Please sent an email to pellacini@di.uniroma1.it with your code as well as the images generated as a .zip file.
+
 Extra Credit
 	1.	Implement displacement mapping on the CPU. Take a heavily subdivided quad and a bump map (greyscale image with heights). Move the vertex position along the vertex normal by a quantity proportional to the bump map. Smooth normals at the end.
