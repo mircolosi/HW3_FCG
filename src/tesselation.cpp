@@ -91,6 +91,8 @@ void smooth_normals(Mesh* mesh) {
     for(vec3f norm : normals){
         norm = normalize(norm);
     }
+    
+    mesh->norm = normals;
 }
 
 // smooth out tangents
@@ -122,7 +124,7 @@ void subdivide_catmullclark(Mesh* subdiv) {
     for(int j = 0; j< copy->subdivision_catmullclark_level; j++){
         // make empty pos and quad arrays
         auto new_pos = vector<vec3f>();
-        auto new_quad = vector<vec4i>(copy->triangle.size()*3+copy->quad.size()*4, zero4i);
+        auto new_quad = vector<vec4i>();
         // create edge_map from current mesh
         auto edge_map = EdgeMap(copy->triangle, copy->quad);
         
@@ -132,38 +134,47 @@ void subdivide_catmullclark(Mesh* subdiv) {
         // add vertices in the middle of each edge (use EdgeMap)
         auto edge_list = edge_map.edges();
         auto mid_points = vector<vec3f>(edge_list.size(),zero3f);
-        
+        int i = 0;
         for (auto edge: edge_list){
             int p1 = edge.x;
             int p2 = edge.y;
             mid_points[edge_map.edge_index(edge)] = (copy->pos[p1] + copy->pos[p2])/2;
+//            mid_points[i] = (copy->pos[p1] + copy->pos[p2])/2;
+
+            i++;
         }
         // add vertices in the middle of each triangle
         auto triangle_centroid = vector<vec3f>(copy->triangle.size(),zero3f);
-        int i = 0;
+        i = 0;
         for (auto triangle: copy->triangle){
-            triangle_centroid[i] = (copy->pos[triangle.x]+copy->pos[triangle.y]+copy->pos[triangle.z])/3;
+            triangle_centroid[i] = (copy->pos[triangle.x]+copy->pos[triangle.y]+copy->pos[triangle.z])/3.0;
             i++;
         }
         // add vertices in the middle of each quad
         auto quad_centroid = vector<vec3f>(copy->quad.size(),zero3f);
         i = 0;
         for (auto quad: copy->quad){
-            quad_centroid[i] = (copy->pos[quad.x]+copy->pos[quad.y]+copy->pos[quad.z]+copy->pos[quad.w])/4;
+            quad_centroid[i] = (copy->pos[quad.x]+copy->pos[quad.y]+copy->pos[quad.z]+copy->pos[quad.w])/4.0;
             i++;
         }
         
+        int mid_points_offset = new_pos.size();
         new_pos.insert(new_pos.end(), mid_points.begin(), mid_points.end());
+        
+        int triangle_offset = new_pos.size();
         new_pos.insert(new_pos.end(), triangle_centroid.begin(), triangle_centroid.end());
+        
+        int quad_offset = new_pos.size();
         new_pos.insert(new_pos.end(), quad_centroid.begin(), quad_centroid.end());
+        
         
         // subdivision pass --------------------------------
         // compute an offset for the edge vertices
-        int mid_points_offset = copy->pos.size();
+//        int mid_points_offset = copy->pos.size();
         // compute an offset for the triangle vertices
-        int triangle_offset = mid_points_offset + mid_points.size();
+//        int triangle_offset = mid_points_offset + mid_points.size();
         // compute an offset for the quad vertices
-        int quad_offset = triangle_offset + triangle_centroid.size();
+//        int quad_offset = triangle_offset + triangle_centroid.size();
         // foreach triangle
         vec4i new_quad1,new_quad2,new_quad3, new_quad4;
         i = 0;
@@ -186,7 +197,7 @@ void subdivide_catmullclark(Mesh* subdiv) {
             i++;
         }
         // foreach quad
-        
+        i = 0;
         for (auto quad: copy->quad){
             int mid_point1, mid_point2, mid_point3, mid_point4;
             
@@ -226,16 +237,15 @@ void subdivide_catmullclark(Mesh* subdiv) {
         
         // normalize avg_pos with its count avg_count
         for (int i = 0; i < avg_pos.size(); i++)
-            avg_pos[i] = avg_pos[i]/avg_count[i];
+            avg_pos[i] /= avg_count[i];
         
         // correction pass ----------------------------------
         // foreach pos, compute correction p = p + (avg_p - p) * (4/avg_count)
         for (int v_index = 0; v_index < avg_pos.size(); v_index++)
-            new_pos[v_index] += (avg_pos[v_index] - new_pos[v_index] * 4 / avg_count[v_index]);
+            new_pos[v_index]  = new_pos[v_index] + (avg_pos[v_index] - new_pos[v_index]) * 4.0 / avg_count[v_index];
             
         // set new arrays pos, quad back into the working mesh; clear triangle array
         copy->pos.clear();
-//        copy->pos.insert(copy->pos.end(), new_pos.begin(),new_pos.end());
         copy->pos = vector<vec3f>(new_pos.size(), zero3f);
         copy->pos = new_pos;
         
@@ -246,18 +256,23 @@ void subdivide_catmullclark(Mesh* subdiv) {
     }
     // clear subdivision
     subdiv->pos.clear();
+    subdiv->norm.clear();
     subdiv->quad.clear();
     subdiv->triangle.clear();
+    
     // according to smooth, either smooth_normals or facet_normals
     if (subdiv->subdivision_catmullclark_smooth)
         smooth_normals(copy);
     else
         facet_normals(copy);
+    
     // copy back
-    subdiv = copy;
+    subdiv->pos = copy->pos;
+    subdiv->quad = copy->quad;
+    subdiv->norm = copy->norm;
+    
     // clear
     delete copy;
-    
 }
 
 // subdivide bezier spline into line segments (assume bezier has only bezier segments and no lines)
@@ -349,6 +364,7 @@ void subdivide_bezier(Mesh* bezier) {
     bezier->pos = polyline->pos;
     bezier->spline = polyline->spline;
     bezier->line = polyline->line;
+    bezier->norm = polyline->norm;
     
     // clear
     delete polyline;
