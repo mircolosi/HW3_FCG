@@ -63,13 +63,28 @@ void init_shaders(ShadeState* state) {
 void init_textures(Scene* scene, ShadeState* state) {
     // YOUR CODE GOES HERE ---------------------
     // grab textures from scene
+    auto textures = get_textures(scene);
+    GLuint texture_id;
     // foreach texture
+    for (auto tex: textures){
         // if already in the state->gl_texture_id map, skip
+        auto iter =state->gl_texture_id.find(tex);
+        if (iter->first == tex) continue;
+        
         // gen texture id
+        glGenTextures(1, &texture_id);
         // set id to the state->gl_texture_id map for later use
+        state->gl_texture_id.insert(pair<image3f*, int>(tex, texture_id));
         // bind texture
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        
         // set texture filtering parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         // load texture data
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width(), tex->height(), 0, GL_RGB, GL_UNSIGNED_SHORT, tex->data());
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
 }
 
 // utility to bind texture parameters for shaders
@@ -77,10 +92,15 @@ void init_textures(Scene* scene, ShadeState* state) {
 void _bind_texture(string name_map, string name_on, image3f* txt, int pos, ShadeState* state) {
     // YOUR CODE GOES HERE ---------------------
     // if txt is not null
+    if (txt != nullptr) {
         // set texture on boolean parameter to true
+        bool isText = true;
+        
         // activate a texture unit at position pos
         // bind texture object to it from state->gl_texture_id map
         // set texture parameter to the position pos
+    }
+
     // else
         // set texture on boolean parameter to false
         // activate a texture unit at position pos
