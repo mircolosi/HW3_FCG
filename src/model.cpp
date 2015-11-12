@@ -94,17 +94,30 @@ void _bind_texture(string name_map, string name_on, image3f* txt, int pos, Shade
     // if txt is not null
     if (txt != nullptr) {
         // set texture on boolean parameter to true
-        bool isText = true;
+        GLint loc_on = glGetUniformLocation(state->gl_program_id, name_on.c_str());
+        glUniform1i(loc_on, GL_TRUE);
+
+        // activate a texture unit at position pos
+        glActiveTexture(pos);
+        // bind texture object to it from state->gl_texture_id map
+        glBindTexture(GL_TEXTURE_2D, state->gl_texture_id.find(txt)->second);
+        // set texture parameter to the position pos
+        GLint loc = glGetUniformLocation(state->gl_program_id, name_map.c_str());
+        glUniform1i(loc, pos);
+    }
+    // else
+    else {
+        // set texture on boolean parameter to false
+        GLint loc_on = glGetUniformLocation(state->gl_program_id, name_on.c_str());
+        glUniform1i(loc_on, GL_FALSE);
         
         // activate a texture unit at position pos
-        // bind texture object to it from state->gl_texture_id map
-        // set texture parameter to the position pos
-    }
-
-    // else
-        // set texture on boolean parameter to false
-        // activate a texture unit at position pos
+        glActiveTexture(pos);
+        
         // set zero as the texture id
+        GLint loc = glGetUniformLocation(state->gl_program_id, name_map.c_str());
+        glUniform1i(loc, 0);
+    }
 }
 
 // render the scene with OpenGL
