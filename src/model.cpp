@@ -177,6 +177,9 @@ void shade(Scene* scene, ShadeState* state) {
                     mesh->mat->n);
         // YOUR CODE GOES HERE ---------------------
         // bind texture params (txt_on, sampler)
+        _bind_texture("material_kd_txt", "material_kd_txt_on", mesh->mat->kd_txt, 0, state);
+        _bind_texture("material_ks_txt", "material_ks_txt_on", mesh->mat->ks_txt, 1, state);
+        _bind_texture("material_norm_txt", "material_norm_txt_on", mesh->mat->norm_txt, 2, state);
         
         // bind mesh frame - use frame_to_matrix
         glUniformMatrix4fv(glGetUniformLocation(state->gl_program_id,"mesh_frame"),
@@ -186,11 +189,15 @@ void shade(Scene* scene, ShadeState* state) {
         auto vertex_pos_location = glGetAttribLocation(state->gl_program_id, "vertex_pos");
         auto vertex_norm_location = glGetAttribLocation(state->gl_program_id, "vertex_norm");
         // YOUR CODE GOES HERE ---------------------
+        auto vertex_texcoord_location = glGetAttribLocation(state->gl_program_id, "vertex_texcoord");
+        
         glEnableVertexAttribArray(vertex_pos_location);
         glVertexAttribPointer(vertex_pos_location, 3, GL_FLOAT, GL_FALSE, 0, &mesh->pos[0].x);
         glEnableVertexAttribArray(vertex_norm_location);
         glVertexAttribPointer(vertex_norm_location, 3, GL_FLOAT, GL_FALSE, 0, &mesh->norm[0].x);
         // YOUR CODE GOES HERE ---------------------
+        glEnableVertexAttribArray(vertex_texcoord_location);
+        glVertexAttribPointer(vertex_texcoord_location, 2, GL_FLOAT, GL_FALSE, 0, &mesh->texcoord[0].x);
         
         // draw triangles and quads
         if(not scene->draw_wireframe) {
@@ -209,6 +216,7 @@ void shade(Scene* scene, ShadeState* state) {
         glDisableVertexAttribArray(vertex_pos_location);
         glDisableVertexAttribArray(vertex_norm_location);
         // YOUR CODE GOES HERE ---------------------
+        glDisableVertexAttribArray(vertex_texcoord_location);
     }
 }
 

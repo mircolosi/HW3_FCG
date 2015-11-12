@@ -30,10 +30,20 @@ void main() {
     vec3 n = normalize(norm);
     // YOUR CODE GOES HERE ---------------------
     // lookup normal map if needed
+    if (material_norm_txt_on)
+        n = normalize(texture2D(material_norm_txt, pos)*2-1);
+    
     // compute material values by looking up textures is necessary
     vec3 kd = material_kd; // placeholder
     vec3 ks = material_ks; // placeholder
    // YOUR CODE GOES HERE ---------------------
+    if (material_kd_txt_on)
+        kd *= material_kd_txt;
+    
+    if (material_ks_txt_on)
+        ks *= material_ks_txt;
+    
+    
     // accumulate ambient
     vec3 c = ambient * kd;
     // foreach light
