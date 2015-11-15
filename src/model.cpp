@@ -63,13 +63,28 @@ void init_shaders(ShadeState* state) {
 void init_textures(Scene* scene, ShadeState* state) {
     // YOUR CODE GOES HERE ---------------------
     // grab textures from scene
+    auto textures = get_textures(scene);
+    GLuint texture_id;
     // foreach texture
+    for (auto tex: textures){
         // if already in the state->gl_texture_id map, skip
+        auto iter =state->gl_texture_id.find(tex);
+        if (iter->first == tex) continue;
+        
         // gen texture id
+        glGenTextures(1, &texture_id);
         // set id to the state->gl_texture_id map for later use
+        state->gl_texture_id.insert(pair<image3f*, int>(tex, texture_id));
         // bind texture
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        
         // set texture filtering parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         // load texture data
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width(), tex->height(), 0, GL_RGB, GL_FLOAT, tex->data());
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
 }
 
 // utility to bind texture parameters for shaders
@@ -77,14 +92,32 @@ void init_textures(Scene* scene, ShadeState* state) {
 void _bind_texture(string name_map, string name_on, image3f* txt, int pos, ShadeState* state) {
     // YOUR CODE GOES HERE ---------------------
     // if txt is not null
+    if (txt != nullptr) {
         // set texture on boolean parameter to true
+        GLint loc_on = glGetUniformLocation(state->gl_program_id, name_on.c_str());
+        glUniform1i(loc_on, GL_TRUE);
+
         // activate a texture unit at position pos
+        glActiveTexture(GL_TEXTURE0+pos);
         // bind texture object to it from state->gl_texture_id map
+        glBindTexture(GL_TEXTURE_2D, state->gl_texture_id.find(txt)->second);
         // set texture parameter to the position pos
+        GLint loc = glGetUniformLocation(state->gl_program_id, name_map.c_str());
+        glUniform1i(loc, pos);
+    }
     // else
+    else {
         // set texture on boolean parameter to false
+        GLint loc_on = glGetUniformLocation(state->gl_program_id, name_on.c_str());
+        glUniform1i(loc_on, GL_FALSE);
+        
         // activate a texture unit at position pos
+        glActiveTexture(pos);
+        
         // set zero as the texture id
+        GLint loc = glGetUniformLocation(state->gl_program_id, name_map.c_str());
+        glUniform1i(loc, 0);
+    }
 }
 
 // render the scene with OpenGL
@@ -144,6 +177,9 @@ void shade(Scene* scene, ShadeState* state) {
                     mesh->mat->n);
         // YOUR CODE GOES HERE ---------------------
         // bind texture params (txt_on, sampler)
+        _bind_texture("material_kd_txt", "material_kd_txt_on", mesh->mat->kd_txt, 0, state);
+        _bind_texture("material_ks_txt", "material_ks_txt_on", mesh->mat->ks_txt, 1, state);
+        _bind_texture("material_norm_txt", "material_norm_txt_on", mesh->mat->norm_txt, 2, state);
         
         // bind mesh frame - use frame_to_matrix
         glUniformMatrix4fv(glGetUniformLocation(state->gl_program_id,"mesh_frame"),
@@ -153,11 +189,18 @@ void shade(Scene* scene, ShadeState* state) {
         auto vertex_pos_location = glGetAttribLocation(state->gl_program_id, "vertex_pos");
         auto vertex_norm_location = glGetAttribLocation(state->gl_program_id, "vertex_norm");
         // YOUR CODE GOES HERE ---------------------
+        auto vertex_texcoord_location = glGetAttribLocation(state->gl_program_id, "vertex_texcoord");
+        
         glEnableVertexAttribArray(vertex_pos_location);
         glVertexAttribPointer(vertex_pos_location, 3, GL_FLOAT, GL_FALSE, 0, &mesh->pos[0].x);
         glEnableVertexAttribArray(vertex_norm_location);
         glVertexAttribPointer(vertex_norm_location, 3, GL_FLOAT, GL_FALSE, 0, &mesh->norm[0].x);
         // YOUR CODE GOES HERE ---------------------
+        if (!mesh->texcoord.empty()) {
+            glEnableVertexAttribArray(vertex_texcoord_location);
+            glVertexAttribPointer(vertex_texcoord_location, 2, GL_FLOAT, GL_FALSE, 0, &mesh->texcoord[0].x);
+        }
+
         
         // draw triangles and quads
         if(not scene->draw_wireframe) {
@@ -176,6 +219,8 @@ void shade(Scene* scene, ShadeState* state) {
         glDisableVertexAttribArray(vertex_pos_location);
         glDisableVertexAttribArray(vertex_norm_location);
         // YOUR CODE GOES HERE ---------------------
+        if (!mesh->texcoord.empty())
+            glDisableVertexAttribArray(vertex_texcoord_location);
     }
 }
 
