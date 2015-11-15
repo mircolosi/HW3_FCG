@@ -31,17 +31,17 @@ void main() {
     // YOUR CODE GOES HERE ---------------------
     // lookup normal map if needed
     if (material_norm_txt_on)
-        n = normalize(texture2D(material_norm_txt, pos)*2-1);
+        n = normalize(texture2D(material_norm_txt, texcoord).xyz*2-1);
     
     // compute material values by looking up textures is necessary
     vec3 kd = material_kd; // placeholder
     vec3 ks = material_ks; // placeholder
    // YOUR CODE GOES HERE ---------------------
     if (material_kd_txt_on)
-        kd *= material_kd_txt;
+        kd *= texture2D(material_kd_txt, texcoord).xyz;
     
     if (material_ks_txt_on)
-        ks *= material_ks_txt;
+        ks *= texture2D(material_ks_txt, texcoord).xyz;
     
     
     // accumulate ambient
