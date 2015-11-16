@@ -218,6 +218,9 @@ void subdivide_catmullclark(Mesh* subdiv) {
             
             i++;
         }
+        
+        // MYCODE
+        if (!copy->subdiv_quad){
         // averaging pass ----------------------------------
         // create arrays to compute pos averages (avg_pos, avg_count)
         // arrays have the same length as the new pos array, and are init to zero
@@ -244,6 +247,8 @@ void subdivide_catmullclark(Mesh* subdiv) {
         for (int v_index = 0; v_index < avg_pos.size(); v_index++)
             new_pos[v_index]  = new_pos[v_index] + (avg_pos[v_index] - new_pos[v_index]) * 4.0 / avg_count[v_index];
             
+        }
+        
         // set new arrays pos, quad back into the working mesh; clear triangle array
         copy->pos.clear();
         copy->pos = vector<vec3f>(new_pos.size(), zero3f);
@@ -266,6 +271,10 @@ void subdivide_catmullclark(Mesh* subdiv) {
     else
         facet_normals(copy);
     
+    // MYCODE
+    if (subdiv->subdiv_quad)
+        displacement_map(copy);
+    
     // copy back
     subdiv->pos = copy->pos;
     subdiv->quad = copy->quad;
@@ -274,6 +283,21 @@ void subdivide_catmullclark(Mesh* subdiv) {
     // clear
     delete copy;
 }
+
+// MYCODE
+void displacement_map(Mesh* mesh){
+    auto bump = mesh->mat->bump_txt;
+    for (int k = 0; k < mesh->pos.size(); k++){
+        auto p = vec2f(((mesh->pos.at(k).x)+1)/2,((mesh->pos.at(k).y)+1)/2);
+        auto h = bump->at(p.x*(bump->width()-1), p.y*(bump->height()-1));
+//        printf("\npx=\t%f\tpy=\t%f",p.x*bump->width(),p.y*bump->height());
+//        printf("\nhx%d=\t%f\thy%d=\t%f",n,h.x,m,h.y);
+        mesh->pos[k] += mesh->norm[k]*h.x/9;
+    }
+    
+    smooth_normals(mesh);
+}
+
 
 // subdivide bezier spline into line segments (assume bezier has only bezier segments and no lines)
 void subdivide_bezier(Mesh* bezier) {

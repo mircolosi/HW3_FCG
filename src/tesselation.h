@@ -57,4 +57,7 @@ void subdivide_surface(Surface* surface);
 // make a surface mesh
 Mesh* make_surface_mesh(frame3f frame, float radius, bool isquad, Material* mat, float offset = 0);
 
+// MYCODE
+void displacement_map(Mesh* mesh);
+
 #endif

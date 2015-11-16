@@ -169,6 +169,10 @@ Material* json_parse_material(const jsonvalue& json) {
     json_parse_opttexture(json, material->kd_txt, "kd_txt");
     json_parse_opttexture(json, material->ks_txt, "ks_txt");
     json_parse_opttexture(json, material->norm_txt, "norm_txt");
+    
+    //MYCODE
+    json_parse_opttexture(json, material->bump_txt, "bump_txt");
+    
     return material;
 }
 
@@ -259,6 +263,10 @@ Mesh* json_parse_mesh(const jsonvalue& json) {
         if (mesh->pos.empty()) mesh->pos = mesh->skinning->rest_pos;
         if (mesh->norm.empty()) mesh->norm = mesh->skinning->rest_norm;
     }
+    
+    // MYCODE
+    json_set_optvalue(json, mesh->subdiv_quad, "subdiv_quad");
+    
     return mesh;
 }
 

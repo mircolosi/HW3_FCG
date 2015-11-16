@@ -24,6 +24,9 @@ struct Material {
     image3f*    kr_txt = nullptr;   // reflection texture
     image3f*    norm_txt = nullptr; // normal texture
     
+    // MYCODE
+    image3f*    bump_txt = nullptr;
+    
     bool        double_sided = false;   // double-sided material
     bool        microfacet = false; // use microfacet formulation
 };
@@ -97,6 +100,9 @@ struct Mesh {
     MeshCollision*  collision = nullptr;        // collision data
     
     BVHAccelerator* bvh = nullptr;              // bvh accelerator for intersection
+    
+    // MYCODE
+    bool subdiv_quad = false;
 };
 
 // surface made of eitehr a spehre or a quad (as determined by
