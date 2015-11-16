@@ -7,3 +7,4 @@
 ../bin/model 07_shuttle.json
 ../bin/model 08_head.json
 ../bin/model 09_sibenik.json
+../bin/model 10_displacement.json
